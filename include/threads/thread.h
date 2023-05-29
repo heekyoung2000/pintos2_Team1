@@ -94,7 +94,12 @@ struct thread {
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
-
+	
+	/*새로 생성한 함수*/
+	int64_t wakeup_tick;
+	
+	
+	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -142,5 +147,17 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+
+/*새로 생성한 함수-alarm*/
+void thread_sleep(int64_t);
+void thread_wakeup(int64_t);
+void update_next_tick_to_awake(int64_t);
+int64_t get_next_tick_to_awake(void);
+
+/*새로 생성한 함수- priority scheduling*/
+void text_max_priority(void);
+bool cmp_priority(const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux UNUSED);
 
 #endif /* threads/thread.h */
