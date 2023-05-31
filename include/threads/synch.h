@@ -6,8 +6,14 @@
 
 /* A counting semaphore. */
 struct semaphore {
-	unsigned value;             /* Current value. */
-	struct list waiters;        /* List of waiting threads. */
+	unsigned value;             /* Current value. 해당 자원의 개수를 나타내는 value*/
+	struct list waiters;        /* List of waiting threads. 이자원을 기다리는 스레드가 줄 서 있는 waiters 리스트가 들어있음*/
+};
+
+/*새로 생성한 구조체*/
+struct semaphore_elem{
+	struct list_elem elem;
+	struct semaphore semaphore;
 };
 
 void sema_init (struct semaphore *, unsigned value);

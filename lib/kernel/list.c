@@ -271,6 +271,7 @@ list_front (struct list *list) {
 	return list->head.next;
 }
 
+
 /* Returns the back element in LIST.
    Undefined behavior if LIST is empty. */
 struct list_elem *

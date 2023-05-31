@@ -95,8 +95,16 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 	
-	/*새로 생성한 함수*/
+	/*새로 생성한 변수*/
 	int64_t wakeup_tick;
+
+	/*새로 생성한 변수-priority donation*/
+	int init_priority; // thread의 priority는 donation에 의해 매번 바뀔 수 있음. 따라서 맨 처음에 할당받은 priority를 기억해둔다.
+	struct lock *wait_on_lock; // 해당 스레드가 대기하고 있는 lock 자료구조 주소 저장
+	struct list donations; // 만약 우선순위가 높은 thread의 우선순위를 기부했다면 우선순위가 낮은 thread에 높은 thread를 기억해둔다.
+	struct list_elem donation_elem; // 우선순위가 낮은 thread에 우선순위가 높은 thread의 이름을 저장(기부자 목록같은 느낌)
+
+
 	
 	
 	
@@ -155,9 +163,18 @@ void update_next_tick_to_awake(int64_t);
 int64_t get_next_tick_to_awake(void);
 
 /*새로 생성한 함수- priority scheduling*/
-void text_max_priority(void);
+void test_max_priority(void);
 bool cmp_priority(const struct list_elem *a,
 					const struct list_elem *b,
 					void *aux UNUSED);
 
+/*새로생성한 함수 - donation*/
+bool
+thread_compare_donate_priority(const struct list_elem *l,const struct list_elem *s,void *aux UNUSED);
+bool cmp_sem_priority(const struct list_elem *a,
+					const struct list_elem *b,
+					void *aux UNUSED);
+void donate_priority(void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority(void);
 #endif /* threads/thread.h */

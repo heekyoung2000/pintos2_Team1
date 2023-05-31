@@ -270,14 +270,17 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 
-	/*내가 생성한 함수
+	/*내가 생성한 함수*/
 	//new_thread 구조체를 생성후 tid(아마 새로 ready_list에 삽입할 thread)로 지정해준다
-	struct thread *new_thread=tid;
-	//t->priority: 실행중인 thread
+	struct thread *curr=thread_current();
+	//thread_current ()->priority: 실행중인 thread
 	//new_thread->prioirty : 새로운 thread
-	if (t->priority < new_thread->priority){
+	// if (thread_current()->priority < new_thread->priority){
+	// 	thread_yield();
+	// }
+	if (cmp_priority(&t->elem, &curr->elem, NULL)) {
 		thread_yield();
-	}*/
+	}
 
 	/*현재 실행되고 있는 thread와 새로 ready_list에 삽입할 thread의 우선순위를 비교한다. 
 	만약 새로운 thread가 더 높은 우선순위 일 경우 CPU를 Yield한다.*/
@@ -331,11 +334,11 @@ thread_unblock (struct thread *t) {
 	ASSERT (t->status == THREAD_BLOCKED); // thread t의 현재 상태가 blocked되어 있는지 확인한다.
 	
 	
+	/*내가 수정한 코드*/
+	//list_push_back (&ready_list, &t->elem); //ready_lis에 T를 가장 뒷줄에 다시 집어 넣는다.  list_push_back : 리스트의 맨 마지막 요소에 집어 넣음
 	
-	list_push_back (&ready_list, &t->elem); //ready_lis에 T를 가장 뒷줄에 다시 집어 넣는다.  list_push_back : 리스트의 맨 마지막 요소에 집어 넣음
-	/*내가 수정한 코드
 	//thread가 unblock 될때 우선순위 순으로 정렬되어 ready_list에 삽입되도록 수정
-	list_insert_ordered(&ready_list,&t->elem, cmp_priority,NULL);*/
+	list_insert_ordered(&ready_list,&t->elem, cmp_priority,NULL);
 
 	
 	
@@ -413,26 +416,76 @@ thread_yield (void) {
 	//만약 현재 스레드가 idle 스레드가 아니라면 ready queue에 다시 담는다.
 	//idle 스레드라면 담지 않는다. 어차피 static으로 선언되어 있어, 필요할 때 불러올 수 있다.
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+
+		/*내가 수정한 코드*/
+		// list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list,&curr->elem, cmp_priority,NULL);
+
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
 
 /*새로 생성한 함수(priority) - 현재 수행중인 스레드와 가장 높은 우선순위의 스레드의 우선순위를 비교하여 스케줄링*/
+//현재 쓰레드의 우선순위가 더 작다면 thread_yield() 실행
+//가장 높은 우선순위의 스레드는 ready_list 맨 앞에 있을 듯..?
 void test_max_priority(void){
+	//readylist가 emptylist면 반환
+
+	if (list_empty(&ready_list)){
+		return;
+	}
+
+	struct thread *cur_priority = thread_current ();
+	struct list_elem *e = list_begin(&sleep_list);
+	struct thread *t = list_entry(e,struct thread,elem);
+	if (cur_priority->priority< t->priority){
+		thread_yield();
+	}
+	
 
 }
-
 /*새로 생성한 함수(priority) - 인자로 주어진 스레드들의 우선순위를 비교*/
 bool cmp_priority(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
+	/*첫번째 인자의 우선순위가 높으면 1을 반환, 두번째 인자의 우선순위가 높으면 0을 반환*/
 
+	struct thread *t_a = list_entry(a, struct thread, elem);
+	struct thread *t_b = list_entry(b, struct thread, elem);
+
+	if (t_a -> priority > t_b ->priority) return 1;
+	else return 0; 
+	
+	//cmp_priority를 list_insert_ordered() 함수에서 사용...? 어디에..?
+}
+
+/*기존에 있던 cmp_priority()는 스레드 내 구조체를 가지고 옴
+ cem_sem_priroity는 세마포어끼리 세마포어 elem 구조체가 별도로 존재하기 때문에 세마포어를 가지고 스레드를 불러와야 함*/
+ /*thread->semaphore , ready_list -> waiters.list */
+bool cmp_sem_priority(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
+	/*첫번째 인자의 우선순위가 높으면 1을 반환, 두번째 인자의 우선순위가 높으면 0을 반환*/
+	
+	struct semaphore_elem * sa = list_entry(a,struct semaphore_elem,elem);
+	struct semaphore_elem * sb = list_entry(b,struct semaphore_elem,elem);
+	
+	struct list_elem *sa_e = list_begin(&(sa->semaphore.waiters));
+	struct list_elem *sb_e = list_begin(&(sb->semaphore.waiters));
+
+	struct thread *t_a = list_entry(sa_e, struct thread, elem);
+	struct thread *t_b = list_entry(sb_e, struct thread, elem);
+
+	return (t_a -> priority > t_b ->priority);
+	
+	//cmp_priority를 list_insert_ordered() 함수에서 사용...? 어디에..?
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 /*현재 thread의 우선순위를 new_priority로 변경*/
+/*스레드 우선순위 변경시 donation의 발생을 확인하고 우선순위 변경을 위해 donation_prioirty()함수 추가*/
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+	thread_current ()->init_priority = new_priority;
+	//현재 쓰레드의 우선 순위와 ready_list에서 가장 높은 우선 순위를 비교하여 스케줄링 하는 함수 호출
+	refresh_priority();
+	test_max_priority();
 }
 
 /* Returns the current thread's priority. */
@@ -537,6 +590,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *); 
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	//priority donation
+	t->init_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->donations);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -718,3 +776,54 @@ allocate_tid (void) {
 	return tid;
 }
 
+bool
+thread_compare_donate_priority(const struct list_elem *l,const struct list_elem *s,void *aux UNUSED){
+   return list_entry(l,struct thread, donation_elem)->priority > list_entry(s,struct thread, donation_elem)->priority;
+}
+
+
+void donate_priority(void){
+	struct thread *cur = thread_current();
+	
+	//nested prioirty 고려
+	for(int depth=0; depth<8; depth++){//waiting list에서 기다리는 thread를 모두 돌면서
+		if(!cur -> wait_on_lock) break;//thread에 요청하는 lock이 없다면
+		else{
+			struct thread *holder = cur->wait_on_lock -> holder; //holder에 현재 lock에 들어가있는 thread를 가리킴
+			holder->priority = cur->priority; //우선순위 기부
+			cur = holder; // 그 다음 thread로 고
+		}
+		
+	}
+
+}
+
+void remove_with_lock(struct lock *lock){//dontaion_list에서 현재 prioirty를 가진 thread를 제거
+	struct thread *cur = thread_current();
+	struct list_elem *e=list_begin(&cur->donations);
+
+	for(e; e!= list_end(&cur->donations); e= list_next(e)){
+		struct thread *t = list_entry(e, struct thread, donation_elem);
+		if(t->wait_on_lock ==lock){
+			list_remove(&t->donation_elem);
+		}	
+	}
+
+
+}
+
+void refresh_priority(void){ 
+	struct thread *t = thread_current();
+	t->priority = t->init_priority;
+//만약 빈 donations_list가 아닐 경우 list를 우선순위로 정렬하고 맨 앞으로 정렬된 우선순위와 비교후 만약 앞에 있는 우선순위가 더 큰 thread라면 우선순위를 변경한다.
+	if(!list_empty(&t->donations)){ 
+		list_sort(&t->donations, thread_compare_donate_priority,0);
+
+		struct thread *front = list_entry(list_front(&t->donations),struct thread, donation_elem);
+		if(front -> priority > t->priority){
+			t->priority = front->priority;
+		}
+	}
+	
+
+}
