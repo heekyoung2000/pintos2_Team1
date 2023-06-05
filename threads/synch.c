@@ -112,10 +112,13 @@ sema_up (struct semaphore *sema) { //세마포어의 v연산, semaphore를 반�
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)){
       /*새로 작성한 부분*/
-      list_sort(&sema->waiters,&cmp_priority,NULL); // wait_list에 우선순위 순으로 정렬
+      // list_sort(&sema->waiters,&cmp_priority,NULL); // wait_list에 우선순위 순으로 정렬
 
-		thread_unblock (list_entry (list_pop_front (&sema->waiters),
-					struct thread, elem));
+		// thread_unblock (list_entry (list_pop_front (&sema->waiters),
+		// 			struct thread, elem));
+      struct list_elem *max_elem = list_min(&sema->waiters, cmp_priority, NULL);
+      list_remove(max_elem);
+      thread_unblock(list_entry(max_elem, struct thread, elem));
    }
 	sema->value++;
    /*새로 작성한 부분*/

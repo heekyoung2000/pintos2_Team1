@@ -8,5 +8,4 @@ threads/thread.o: ../../threads/thread.c ../../include/threads/thread.h \
  ../../include/threads/intr-stubs.h ../../include/threads/palloc.h \
  ../../include/threads/synch.h ../../include/threads/vaddr.h \
  ../../include/threads/loader.h ../../include/intrinsic.h \
- ../../include/threads/mmu.h ../../include/threads/pte.h \
- ../../include/userprog/process.h
+ ../../include/threads/mmu.h ../../include/threads/pte.h

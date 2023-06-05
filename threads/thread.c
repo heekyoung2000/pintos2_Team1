@@ -11,9 +11,9 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
-#ifdef USERPROG
-#include "userprog/process.h"
-#endif
+// #ifdef USERPROG
+// #include "userprog/process.h"
+// #endif
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -444,21 +444,20 @@ void test_max_priority(void){
 		return;
 	}
 
+	if(!intr_context() && cmp_priority(list_front(&ready_list),&thread_current()->elem,NULL)){
+		thread_yield();
+	}
 	
-	struct thread *cur_priority = thread_current ();
-	struct list_elem *e = list_begin(&sleep_list);
+	// struct thread *cur_priority = thread_current ();
+	// struct list_elem *e = list_begin(&sleep_list);
 
-	if (cur_priority->priority >= list_entry(e, struct thread, elem)->priority)
-		return;
+	// if (cur_priority->priority >= list_entry(e, struct thread, elem)->priority)
+	// 	return;
 
-	if (intr_context()) // P2 에러 방지를 위해 추가
-		return;
+	// if (intr_context()) // P2 에러 방지를 위해 추가
+	// 	return;
 
-	thread_yield();
-
-	// if (cur_priority->priority< t->priority){
-	// 	thread_yield();
-	// }
+	// thread_yield();
 	
 
 }

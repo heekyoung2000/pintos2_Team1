@@ -183,7 +183,7 @@ process_exec (void *f_name) {
 	process_cleanup ();
 
 	/*argument passing*/
-	char *parse[128];
+	char *parse[64];
 	char *token, *save_ptr;
 	int count =0;
 	for(token=strtok_r(file_name," ",&save_ptr); token!=NULL; token=strtok_r(NULL," ",&save_ptr))
@@ -194,13 +194,8 @@ process_exec (void *f_name) {
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
-	if (!success){
-		palloc_free_page (file_name);
-		return -1;
-	}
-
 	/*argument passing*/
-	argument_stack(parse, count, &_if); //함수 내부에서 parse와 rsp의 값을 직접 변경하기 위해 주소를 전달
+	argument_stack(parse, count, &_if.rsp); //함수 내부에서 parse와 rsp의 값을 직접 변경하기 위해 주소를 전달
 	_if.R.rdi = count; // 첫번쨰 인자를 rdi에 (count)
 	_if.R.rsi = (char*)_if.rsp+8; //두번째 인자를 rsi에 (현재 스택 포인터 rsp에서 8만큼 더한 값을 저장)
 
@@ -209,8 +204,8 @@ process_exec (void *f_name) {
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
-	// if (!success)
-	// 	return -1;
+	if (!success)
+		return -1;
 
 	/* Start switched process. */
 	do_iret (&_if);
