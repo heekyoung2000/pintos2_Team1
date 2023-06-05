@@ -245,6 +245,9 @@ thread_create (const char *name, int priority,
 	struct thread *t;
 	tid_t tid; //스레드 ID
 
+	/*새로 추가한 부분 - kernel thread*/
+	// struct kernel_thread_frame *kf;
+
 	ASSERT (function != NULL);
 
 	/* Allocate thread. */
@@ -266,6 +269,11 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
+
+	// kf = alloc_frame(t,sizeof *kf);
+	// kf -> eip = NULL;
+	// kf -> function = function;
+	// kf -> aux = aux;
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -423,6 +431,7 @@ thread_yield (void) {
 
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
+	
 }
 
 /*새로 생성한 함수(priority) - 현재 수행중인 스레드와 가장 높은 우선순위의 스레드의 우선순위를 비교하여 스케줄링*/
@@ -435,12 +444,21 @@ void test_max_priority(void){
 		return;
 	}
 
+	
 	struct thread *cur_priority = thread_current ();
 	struct list_elem *e = list_begin(&sleep_list);
-	struct thread *t = list_entry(e,struct thread,elem);
-	if (cur_priority->priority< t->priority){
-		thread_yield();
-	}
+
+	if (cur_priority->priority >= list_entry(e, struct thread, elem)->priority)
+		return;
+
+	if (intr_context()) // P2 에러 방지를 위해 추가
+		return;
+
+	thread_yield();
+
+	// if (cur_priority->priority< t->priority){
+	// 	thread_yield();
+	// }
 	
 
 }
@@ -453,15 +471,12 @@ bool cmp_priority(const struct list_elem *a,const struct list_elem *b, void *aux
 
 	if (t_a -> priority > t_b ->priority) return 1;
 	else return 0; 
-	
-	//cmp_priority를 list_insert_ordered() 함수에서 사용...? 어디에..?
 }
 
 /*기존에 있던 cmp_priority()는 스레드 내 구조체를 가지고 옴
  cem_sem_priroity는 세마포어끼리 세마포어 elem 구조체가 별도로 존재하기 때문에 세마포어를 가지고 스레드를 불러와야 함*/
  /*thread->semaphore , ready_list -> waiters.list */
 bool cmp_sem_priority(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
-	/*첫번째 인자의 우선순위가 높으면 1을 반환, 두번째 인자의 우선순위가 높으면 0을 반환*/
 	
 	struct semaphore_elem * sa = list_entry(a,struct semaphore_elem,elem);
 	struct semaphore_elem * sb = list_entry(b,struct semaphore_elem,elem);
@@ -474,7 +489,6 @@ bool cmp_sem_priority(const struct list_elem *a,const struct list_elem *b, void 
 
 	return (t_a -> priority > t_b ->priority);
 	
-	//cmp_priority를 list_insert_ordered() 함수에서 사용...? 어디에..?
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */

@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#define USERPROG
 #ifdef VM
 #include "vm/vm.h"
 #endif

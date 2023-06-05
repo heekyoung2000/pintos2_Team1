@@ -50,12 +50,18 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	/*argument passing 하는법*/
+	char *save_ptr;
+	strtok_r(file_name," ",&save_ptr);
+	/*------------------------------------*/
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
 }
+
 
 /* A thread function that launches first user process. */
 static void
@@ -176,17 +182,69 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	/*argument passing*/
+	char *parse[128];
+	char *token, *save_ptr;
+	int count =0;
+	for(token=strtok_r(file_name," ",&save_ptr); token!=NULL; token=strtok_r(NULL," ",&save_ptr))
+		parse[count++]=token;
+	//rkr 
+	/*---------------------*/
+
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
+	if (!success){
+		palloc_free_page (file_name);
+		return -1;
+	}
+
+	/*argument passing*/
+	argument_stack(parse, count, &_if); //함수 내부에서 parse와 rsp의 값을 직접 변경하기 위해 주소를 전달
+	_if.R.rdi = count; // 첫번쨰 인자를 rdi에 (count)
+	_if.R.rsi = (char*)_if.rsp+8; //두번째 인자를 rsi에 (현재 스택 포인터 rsp에서 8만큼 더한 값을 저장)
+
+	hex_dump(_if.rsp, _if.rsp, USER_STACK-(uint64_t)_if.rsp, true); //user stack을 16진수로 프린트
+	/*---------------------*/
+
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
-	if (!success)
-		return -1;
+	// if (!success)
+	// 	return -1;
 
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
+}
+
+void argument_stack(char **parse,int count, void **rsp){ //주소를 전달받았으므로 이중 포인터 사용
+	//parse: 프로그램 이름과 인자가 담긴 배열
+	// count: 인자의 개수
+	// rsp: 스택 포인터를 가리키는 주소 값
+	for(int i=count-1;i>-1;i--){
+		for(int j=strlen(parse[i]); j>-1;j--){
+			(*rsp)--;
+			**(char **)rsp = parse[i][j];
+		}
+		parse[i] = *(char **)rsp; //parse[i]에 현재 rsp의 값 저장해둠( 지금 저장한 인자가 시작하는 주소값)
+	}
+	
+	int padding = (int)*rsp%8;
+	for(int i=0;i<padding;i++){
+		(*rsp)--;
+		**(uint8_t**)rsp=0;
+	}
+
+	(*rsp)-=8;
+	**(char ***)rsp=0;
+
+	for(int i=count-1;i>-1;i--){
+		(*rsp)-=8;
+		**(char ***)rsp=parse[i];
+	}
+
+	(*rsp)-=8;
+	**(void ***)rsp=0;
 }
 
 
@@ -204,6 +262,10 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+
+	for(int i=0;i<100000000;i++){
+		
+	}
 	return -1;
 }
 
