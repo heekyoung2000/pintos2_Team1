@@ -270,22 +270,20 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
-	// kf = alloc_frame(t,sizeof *kf);
-	// kf -> eip = NULL;
-	// kf -> function = function;
-	// kf -> aux = aux;
+	/*project2*/
+	/*현재 스레드의 child_list에 새로 만든 스레드를 추가한다.*/
+	list_push_back(&thread_current()->child_list,&t->child_elem);
 
+	t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fdt == NULL)
+		return TID_ERROR;
 	/* Add to run queue. */
 	thread_unblock (t);
 
 	/*내가 생성한 함수*/
 	//new_thread 구조체를 생성후 tid(아마 새로 ready_list에 삽입할 thread)로 지정해준다
 	struct thread *curr=thread_current();
-	//thread_current ()->priority: 실행중인 thread
-	//new_thread->prioirty : 새로운 thread
-	// if (thread_current()->priority < new_thread->priority){
-	// 	thread_yield();
-	// }
+	
 	if (cmp_priority(&t->elem, &curr->elem, NULL)) {
 		thread_yield();
 	}
@@ -608,6 +606,15 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->init_priority = priority;
 	t->wait_on_lock = NULL;
 	list_init(&t->donations);
+
+	/*project2*/
+	/*프로세스 디스크립터를 초기화한다.*/
+	t->exit_status = 0;
+	t->next_fd = 2;
+	sema_init(&t->load_sema, 0); // load_sema를 초기화한다.
+	sema_init(&t->exit_sema, 0);
+	sema_init(&t->wait_sema, 0);
+	list_init(&(t->child_list)); // 새로 만든 child_list를 초기화해준다.
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

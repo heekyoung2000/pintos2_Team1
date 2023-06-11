@@ -1,6 +1,12 @@
 {
     "files.associations": {
         "thread.h": "c",
-        "interrupt.h": "c"
+        "interrupt.h": "c",
+        "*.inc": "c",
+        "synch.h": "c",
+        "stdio.h": "c",
+        "vm.h": "c",
+        "filesys.h": "c",
+        "syscall.h": "c"
     }
 }

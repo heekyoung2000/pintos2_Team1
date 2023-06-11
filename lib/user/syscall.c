@@ -1,10 +1,11 @@
 #include <syscall.h>
 #include <stdint.h>
 #include "../syscall-nr.h"
+#include "lib/user/syscall.h"
 
 __attribute__((always_inline))
 static __inline int64_t syscall (uint64_t num_, uint64_t a1_, uint64_t a2_,
-		uint64_t a3_, uint64_t a4_, uint64_t a5_, uint64_t a6_) {
+		uint64_t a3_, uint64_t a4_, uint64_t a5_, uint64_t a6_) { //cpu레지스터에 시스템 콜번호(%rax)와 스레드 이름(%rdi)을 넣음
 	int64_t ret;
 	register uint64_t *num asm ("rax") = (uint64_t *) num_;
 	register uint64_t *a1 asm ("rdi") = (uint64_t *) a1_;
@@ -70,18 +71,19 @@ static __inline int64_t syscall (uint64_t num_, uint64_t a1_, uint64_t a2_,
 			0))
 void
 halt (void) {
+
 	syscall0 (SYS_HALT);
 	NOT_REACHED ();
 }
 
 void
-exit (int status) {
+exit (int status) { 
 	syscall1 (SYS_EXIT, status);
 	NOT_REACHED ();
 }
 
 pid_t
-fork (const char *thread_name){
+fork (const char *thread_name){ //syscall1(fork의 시스템콜 번호, 스레드 이름) 호출
 	return (pid_t) syscall1 (SYS_FORK, thread_name);
 }
 
