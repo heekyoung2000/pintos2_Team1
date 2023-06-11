@@ -369,8 +369,6 @@ process_exit (void) {
 		if (curr->fdt[i] != NULL)
 			close(i);
 	}
-
-	
 		
 	palloc_free_multiple(curr->fdt,FDT_PAGES);
 	file_close(curr->running); // 현재 실행 중인 파일도 닫는다.
