@@ -50,9 +50,9 @@ struct page {
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
 	union {
-		struct uninit_page uninit;
-		struct anon_page anon;
-		struct file_page file;
+		struct uninit_page uninit; // 초기화 되지 않은상태를 의미하며 초기화함
+		struct anon_page anon; // 익명 페이지
+		struct file_page file; // 파일 매핑 페이지
 #ifdef EFILESYS
 		struct page_cache page_cache;
 #endif

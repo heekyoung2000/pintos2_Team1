@@ -65,6 +65,7 @@ struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function. */
+	/* 주어진 가상 주소(va)를 사용하여 보조 테이블안에서 해당 페이지를 찾으려고 시도*/
 
 	return page;
 }
@@ -174,6 +175,10 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+	/* 1. 보조 테이블 함수 추가하기*/
+	/* 2. 보조 테이블에 사용할 데이터 구조 선택하기*/
+
+
 }
 
 /* Copy supplemental page table from src to dst */
