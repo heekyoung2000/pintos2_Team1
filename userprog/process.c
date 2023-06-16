@@ -597,6 +597,60 @@ done:
 	return success;
 }
 
+int process_add_file(struct file *f)
+{
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
+
+	/* 파일 객체를 파일 디스크립터 테이블에 추가 */
+
+	while (curr->next_fd < FDT_COUNT_LIMIT && fdt[curr->next_fd])
+		curr->next_fd++;
+	if (curr->next_fd >= FDT_COUNT_LIMIT)
+		return -1;
+	fdt[curr->next_fd] = f;
+
+	/* 파일 디스크립터 리턴 */
+	return curr->next_fd;
+}
+
+struct file *process_get_file(int fd)
+{
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
+	if (fd < 2 || fd >= FDT_COUNT_LIMIT)
+		return NULL;
+	return fdt[fd];
+	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
+	/* 없을 시 NULL 리턴 */
+}
+
+void process_close_file(int fd)
+{
+	struct thread *curr = thread_current();
+	struct file **fdt = curr->fdt;
+	if (fd < 2 || fd >= FDT_COUNT_LIMIT)
+		return NULL;
+	fdt[fd] = NULL;
+}
+
+/*pid를 인자로 받아서 자식 스레드를 반환하는 함수 - process_fork, process_wait에서 쓰임*/
+struct thread *get_child_process(int pid) 
+{
+	/* 자식 리스트에 접근하여 프로세스 디스크립터 검색 */
+	struct thread *cur = thread_current();
+	struct list *child_list = &cur->child_list;
+	for (struct list_elem *e = list_begin(child_list); e != list_end(child_list); e = list_next(e))
+	{
+		struct thread *t = list_entry(e, struct thread, child_elem);
+		/* 해당 pid가 존재하면 프로세스 디스크립터 반환 */
+		if (t->tid == pid)
+			return t;
+	}
+	/* 리스트에 존재하지 않으면 NULL 리턴 */
+	return NULL;
+}
+
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
@@ -740,60 +794,6 @@ install_page (void *upage, void *kpage, bool writable) {
 	 * address, then map our page there. */
 	return (pml4_get_page (t->pml4, upage) == NULL
 			&& pml4_set_page (t->pml4, upage, kpage, writable));
-}
-
-int process_add_file(struct file *f)
-{
-	struct thread *curr = thread_current();
-	struct file **fdt = curr->fdt;
-
-	/* 파일 객체를 파일 디스크립터 테이블에 추가 */
-
-	while (curr->next_fd < FDT_COUNT_LIMIT && fdt[curr->next_fd])
-		curr->next_fd++;
-	if (curr->next_fd >= FDT_COUNT_LIMIT)
-		return -1;
-	fdt[curr->next_fd] = f;
-
-	/* 파일 디스크립터 리턴 */
-	return curr->next_fd;
-}
-
-struct file *process_get_file(int fd)
-{
-	struct thread *curr = thread_current();
-	struct file **fdt = curr->fdt;
-	if (fd < 2 || fd >= FDT_COUNT_LIMIT)
-		return NULL;
-	return fdt[fd];
-	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
-	/* 없을 시 NULL 리턴 */
-}
-
-void process_close_file(int fd)
-{
-	struct thread *curr = thread_current();
-	struct file **fdt = curr->fdt;
-	if (fd < 2 || fd >= FDT_COUNT_LIMIT)
-		return NULL;
-	fdt[fd] = NULL;
-}
-
-/*pid를 인자로 받아서 자식 스레드를 반환하는 함수 - process_fork, process_wait에서 쓰임*/
-struct thread *get_child_process(int pid) 
-{
-	/* 자식 리스트에 접근하여 프로세스 디스크립터 검색 */
-	struct thread *cur = thread_current();
-	struct list *child_list = &cur->child_list;
-	for (struct list_elem *e = list_begin(child_list); e != list_end(child_list); e = list_next(e))
-	{
-		struct thread *t = list_entry(e, struct thread, child_elem);
-		/* 해당 pid가 존재하면 프로세스 디스크립터 반환 */
-		if (t->tid == pid)
-			return t;
-	}
-	/* 리스트에 존재하지 않으면 NULL 리턴 */
-	return NULL;
 }
 
 #else
