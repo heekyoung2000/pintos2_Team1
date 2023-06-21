@@ -334,6 +334,8 @@ struct thread {
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
+	void *rsp; // exception(page fault), syscall 호출시 유저->커널로 이관될때 이때 intr_frame의 rsp가 커널 스택을가리키게 되니까,
+	//유저 스택의 값을 저장하고 있기 위해서 해당 값을 둠
 #endif
 
 	/* Owned by thread.c. */

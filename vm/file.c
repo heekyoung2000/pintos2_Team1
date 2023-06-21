@@ -20,6 +20,7 @@ vm_file_init (void) {
 }
 
 /* Initialize the file backed page */
+/*file backed page를 초기화하는 작업*/
 bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */

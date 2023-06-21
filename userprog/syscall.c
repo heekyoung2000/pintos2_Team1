@@ -15,6 +15,7 @@
 #include "devices/input.h"
 #include "lib/kernel/stdio.h"
 #include "threads/palloc.h"
+#include "vm/vm.h"
 
 
 
@@ -69,6 +70,10 @@ void
 syscall_handler (struct intr_frame *f UNUSED) {
 
 	int syscall_n = f->R.rax; /* 시스템 콜 넘버 */
+
+	#ifdef VM
+		thread_current()->rsp= f->rsp;
+	#endif
 	switch (syscall_n)
 	{
 	case SYS_HALT:
@@ -127,8 +132,8 @@ void check_address(void *addr)
 	if (!is_user_vaddr(addr)) // 유저 영역이 아니거나 NULL이면 프로세스 종료
 		exit(-1);
 
-	if (pml4_get_page(thread_current()->pml4, addr) == NULL)
-		exit(-1);
+	// if (pml4_get_page(thread_current()->pml4, addr) == NULL)
+	// 	exit(-1);
 }
 
 /*핀토스를 종료시키는 시스템 콜*/
@@ -147,10 +152,14 @@ void exit(int status)
 
 /*파일을 생성하는 시스템 콜*/
 bool create(const char *file, unsigned initial_size) 
-{
+{	
+	lock_acquire(&filesys_lock);
 	check_address(file);
 	 // 파일 이름과 파일 사이즈를 인자 값으로 받아 파일을 생성하는 함수
-	return filesys_create(file, initial_size);
+	bool success = filesys_create(file,initial_size);
+	lock_release(&filesys_lock);
+	// return filesys_create(file, initial_size);
+	return success;
 
 }
 
@@ -223,6 +232,11 @@ int read(int fd, void *buffer, unsigned size)
 
 			lock_release(&filesys_lock);
 			return -1;
+		}
+		struct page *page = spt_find_page(&thread_current()->spt,buffer);
+		if(page && !page ->writable){
+			lock_release(&filesys_lock);
+			exit(-1);
 		}
 		bytes_read = file_read(file, buffer, size);
 		lock_release(&filesys_lock);

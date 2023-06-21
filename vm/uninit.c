@@ -22,11 +22,12 @@ static const struct page_operations uninit_ops = {
 	.type = VM_UNINIT,
 };
 
+/* 초기화 되지 않은 페이지를 생성하고, 페이지의 필드를 설정, 초기화되지 않은 페이지의 구조체를 생성하고 초기 상태를 설정한다.*/
 /* DO NOT MODIFY this function */
 void
 uninit_new (struct page *page, void *va, vm_initializer *init,
 		enum vm_type type, void *aux,
-		bool (*initializer)(struct page *, enum vm_type, void *)) {
+		bool (*initializer)(struct page *, enum vm_type, void *)) {//uninit_new(p,upage,init,type,aux,page_initializer)
 	ASSERT (page != NULL);
 
 	*page = (struct page) {
@@ -65,4 +66,5 @@ uninit_destroy (struct page *page) {
 	struct uninit_page *uninit UNUSED = &page->uninit;
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
+	return;
 }

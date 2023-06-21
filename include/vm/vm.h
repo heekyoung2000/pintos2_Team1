@@ -2,6 +2,7 @@
 #define VM_VM_H
 #include <stdbool.h>
 #include "threads/palloc.h"
+#include "hash.h"
 
 enum vm_type {
 	/* page not initialized */
@@ -41,6 +42,10 @@ struct thread;
  * uninit_page, file_page, anon_page, and page cache (project4).
  * DO NOT REMOVE/MODIFY PREDEFINED MEMBER OF THIS STRUCTURE. */
 struct page {
+	/*project 3 새로 추가한 함수*/
+	struct hash_elem hash_elem;
+	bool writable;
+	/*---------*/
 	const struct page_operations *operations;
 	void *va;              /* Address in terms of user space */
 	struct frame *frame;   /* Back reference for frame */
@@ -61,8 +66,10 @@ struct page {
 
 /* The representation of "frame" */
 struct frame {
-	void *kva;
+	void *kva; // 커널 가상 주소
 	struct page *page;
+	struct list_elem frame_elem;
+	
 };
 
 /* The function table for page operations.
@@ -83,8 +90,12 @@ struct page_operations {
 
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
- * All designs up to you for this. */
+ * All designs up to you for this. 
+ * 현재 프로세스의 메모리 공간을 나타내는 구조체입니다. 
+ * 이 구조체의 디자인은 특정한 구조를 강요하지 않습니다. 
+ * 이 구조체에 대한 모든 설계 결정은 사용자에게 달려있습니다. 즉, 이 구조체를 어떻게 정의하고 구성할지는 개발자가 자유롭게 결정할 수 있습니다. 구조체의 멤버 및 구조 등을 사용자가 원하는 방식으로 설계할 수 있습니다.*/
 struct supplemental_page_table {
+	struct hash spt_hash;
 };
 
 #include "threads/thread.h"
@@ -108,5 +119,10 @@ bool vm_alloc_page_with_initializer (enum vm_type type, void *upage,
 void vm_dealloc_page (struct page *page);
 bool vm_claim_page (void *va);
 enum vm_type page_get_type (struct page *page);
-
+// add function
+void hash_page_destroy(struct hash_elem *e, void *aux);
+unsigned page_less(const struct hash_elem *a,
+		const struct hash_elem *b,
+		void *aux UNUSED);
+unsigned page_hash(const struct hash_elem *e, void *aux UNUSED);
 #endif  /* VM_VM_H */
