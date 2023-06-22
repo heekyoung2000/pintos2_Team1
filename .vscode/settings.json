@@ -10,6 +10,7 @@
         "syscall.h": "c",
         "hash.h": "c",
         "mmu.h": "c",
-        "vaddr.h": "c"
+        "vaddr.h": "c",
+        "process.h": "c"
     }
 }

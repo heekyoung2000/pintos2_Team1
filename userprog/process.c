@@ -218,6 +218,7 @@ __do_fork (void *aux) {
 	current->next_fd = parent->next_fd;
 
 	// 로드가 완료될 때까지 기다리고 있던 부모 대기 해제
+	
 	sema_up(&current->load_sema);
 
 	process_init ();

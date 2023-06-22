@@ -234,7 +234,7 @@ int read(int fd, void *buffer, unsigned size)
 			return -1;
 		}
 		struct page *page = spt_find_page(&thread_current()->spt,buffer);
-		if(page && !page ->writable){
+		if(page && !page ->writable){ //페이지가 존재하면서도 쓰기가 불가능한 경우 프로세스 종료
 			lock_release(&filesys_lock);
 			exit(-1);
 		}

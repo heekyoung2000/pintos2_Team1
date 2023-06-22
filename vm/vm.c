@@ -48,6 +48,7 @@ bool
 vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		vm_initializer *init, void *aux) { //vm_alloc_page_with_initializer (VM_ANON, upage,writable, lazy_load_segment, lazy_load_arg), 
 		// setup stack - vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0 ,stack_bottom,1, NULL,NULL)
+		// vm_stack_growth -vm_alloc_page(VM_ANON|VM_MARKER_0,pg_round_down(addr),1);
 
 	ASSERT (VM_TYPE(type) != VM_UNINIT)
 
