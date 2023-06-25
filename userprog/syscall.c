@@ -37,6 +37,10 @@ tid_t fork(const char *thread_name,struct intr_frame *f);
 int exec(const char *cmd_line);
 int wait(int pid);
 
+/*project3*/
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset);
+void munmap (void *addr);
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -117,6 +121,16 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		break;
 	case SYS_CLOSE:
 		close(f->R.rdi);
+	case SYS_MMAP:
+		f->R.rax = mmap(f->R.rdi, f->R.rsi, f->R.rdx, f->R.r10, f->R.r8);
+		break;
+	case SYS_MUNMAP:
+		munmap(f->R.rdi);
+		break;
+
+	
+	
+	
 	}
 	
 	// TODO: Your implementation goes here.
@@ -329,4 +343,54 @@ int exec(const char *cmd_line)
 int wait(int pid)
 {
 	return process_wait(pid);
+}
+
+void *mmap (void *addr, size_t length, int writable, int fd, off_t offset){
+
+	// if(offset%PGSIZE !=0){ // OFFSET의 값이 PGSIZE에 알맞게 할당되어 있는가 체크
+	// 	return NULL;
+	// }
+	// if(pg_round_down(addr)!= addr || is_kernel_vaddr(addr) || addr == NULL || (long long) length <=0){
+	// 	return NULL;
+	// } // addr의 값이 유효한 주소인지 확인, 해당 주소가 NULL인지, 커널영역인지 유저영역인지 , 파일을 읽어야하는 크기인 length가 0 이하인지 
+
+	if(!addr || addr != pg_round_down(addr)){
+		return NULL;
+	}
+
+	if(offset!= pg_round_down(offset)){
+		return NULL;
+	}
+
+	if(!is_user_vaddr(addr)||!is_user_vaddr(addr+length)){
+		return NULL;
+	}
+
+	
+	if(spt_find_page(&thread_current()->spt,addr)){
+		return NULL;
+	}
+
+	/*표준 입력(stdin) 및 표준 출력(stdout)과 같은 특정 파일 디스크립터는 일반 파일이 아닌 콘솔 입력 및 출력과 관련이 있으므로 예외처리*/
+	if(fd==STDIN_FILENO || fd == STDOUT_FILENO)
+	{
+		// exit(-1);
+		return NULL;
+	}
+
+	//fd를 통해 가져온 file 구조체가 유효한지 검증한다.
+	struct file *file = process_get_file(fd); 
+	if (file == NULL)
+		return NULL;
+	
+	if(file_length(file)==0 || (int)length<=0){
+		return NULL;
+	}
+
+	return do_mmap(addr,length,writable,file,offset);
+}
+
+void munmap (void *addr)
+{	
+	do_munmap(addr);
 }

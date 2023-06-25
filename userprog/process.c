@@ -19,7 +19,7 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "userprog/syscall.h"
-// #define VM //ifdef vm을 사용해주기 위해서는 define vm을 사용해야 함
+#define VM //ifdef vm을 사용해주기 위해서는 define vm을 사용해야 함
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -111,7 +111,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 		// 이거 넣으면 간헐적으로 실패함 (syn-read)
 		// list_remove(&child->child_elem);
 		// 자식이 완전히 종료되고 스케줄링이 이어질 수 있도록 자식에게 signal을 보낸다.
-		sema_up(&child->exit_sema);
+		//sema_up(&child->exit_sema);
 		// 자식 프로세스의 pid가 아닌 TID_ERROR를 반환한다.
 		return TID_ERROR;
 	}
@@ -262,7 +262,9 @@ process_exec (void *f_name) {
 	/*---------------------*/
 
 	/* And then load the binary */
+	lock_acquire(&filesys_lock);
 	success = load (file_name, &_if);
+	lock_release(&filesys_lock);
 
 	if (!success){
 		palloc_free_page (file_name);
@@ -754,7 +756,7 @@ install_page (void *upage, void *kpage, bool writable) {
  * upper block. */
 
 // page fault가 발생했을 때 페이지를 지연하여 로드하는 역할
-static bool
+bool
 lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
@@ -840,7 +842,7 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 
-	if(vm_alloc_page_with_initializer(VM_ANON | VM_MARKER_0 ,stack_bottom,1, NULL,NULL)){
+	if(vm_alloc_page(VM_ANON | VM_MARKER_0 ,stack_bottom,1)){
 		success = vm_claim_page(stack_bottom);
 		if(success){
 			if_->rsp=USER_STACK;

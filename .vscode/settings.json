@@ -11,6 +11,8 @@
         "hash.h": "c",
         "mmu.h": "c",
         "vaddr.h": "c",
-        "process.h": "c"
+        "process.h": "c",
+        "input.h": "c",
+        "palloc.h": "c"
     }
 }

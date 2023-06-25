@@ -45,6 +45,7 @@ struct page {
 	/*project 3 새로 추가한 함수*/
 	struct hash_elem hash_elem;
 	bool writable;
+	int mapped_page_count;
 	/*---------*/
 	const struct page_operations *operations;
 	void *va;              /* Address in terms of user space */
@@ -70,6 +71,11 @@ struct frame {
 	struct page *page;
 	struct list_elem frame_elem;
 	
+};
+struct slot{
+	struct page *page;
+	uint32_t slot_no;
+	struct list_elem swap_elem;
 };
 
 /* The function table for page operations.
@@ -125,4 +131,9 @@ unsigned page_less(const struct hash_elem *a,
 		const struct hash_elem *b,
 		void *aux UNUSED);
 unsigned page_hash(const struct hash_elem *e, void *aux UNUSED);
+
+struct list swap_table;
+struct list frame_table;
+struct lock swap_table_lock;
+struct lock frame_table_lock;
 #endif  /* VM_VM_H */

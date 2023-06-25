@@ -5,6 +5,7 @@
 #include "vm/inspect.h"
 #include "threads/mmu.h"
 #include "threads/thread.h"
+#include "userprog/process.h"
 
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
@@ -19,6 +20,8 @@ vm_init (void) {
 	register_inspect_intr ();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+	list_init(&frame_table);
+	lock_init(&frame_table_lock);
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -90,7 +93,7 @@ err:
 /* Find VA from spt and return page. On error, return NULL. */
 struct page *
 spt_find_page (struct supplemental_page_table *spt UNUSED, void *va UNUSED) {
-	struct page *page;
+	struct page *page=NULL;
 	page = (struct page *)malloc(sizeof(struct page));
 	struct hash_elem *e;
 
@@ -137,27 +140,48 @@ spt_insert_page (struct supplemental_page_table *spt UNUSED,
 
 void
 spt_remove_page (struct supplemental_page_table *spt, struct page *page) {
+	hash_delete(&spt->spt_hash,&page->hash_elem);
 	vm_dealloc_page (page);
 	return true;
 }
 
-/* Get the struct frame, that will be evicted. */
+/* Get the struct frame, that will be evicted.-swap_out시키는 함수 */
 static struct frame *
 vm_get_victim (void) {
 	struct frame *victim = NULL;
 	 /* TODO: The policy for eviction is up to you. */
+	struct thread *curr = thread_current();
 
+	lock_acquire(&frame_table_lock);
+	struct list_elem *start = list_begin(&frame_table);
+	for(start; start!=list_end(&frame_table); start =list_next(start)){
+		victim = list_entry(start,struct frame, frame_elem);
+		if(victim-> page == NULL){
+			lock_release(&frame_table_lock);
+			return victim;
+		}
+		if(pml4_is_accessed(curr->pml4, victim->page->va)){
+			pml4_set_accessed(curr->pml4, victim->page->va,0);
+		}
+		else{
+			lock_release(&frame_table_lock);
+			return victim;
+		}
+	}
+	lock_release(&frame_table_lock);
 	return victim;
 }
 
 /* Evict one page and return the corresponding frame.
- * Return NULL on error.*/
+ * Return NULL on error.- 한페이지를 퇴출하고 해당하는 프레임을 반환*/
 static struct frame *
 vm_evict_frame (void) {
-	struct frame *victim UNUSED = vm_get_victim ();
+	struct frame *victim = vm_get_victim ();
+	if(victim->page)
+		swap_out(victim->page);
 	/* TODO: swap out the victim and return the evicted frame. */
 
-	return NULL;
+	return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -174,11 +198,18 @@ vm_get_frame (void) {
 	/* TODO: Fill this function. */
 	void *kva = palloc_get_page(PAL_USER);
 
-	if(kva==NULL) PANIC("todo");
-
+	if(kva==NULL) {
+		struct frame *victim = vm_evict_frame();
+		victim->page = NULL;
+		return victim;
+	}
 	frame =(struct frame *)malloc(sizeof(struct frame));
 	frame->kva = kva;
 	frame->page = NULL;
+
+	lock_acquire(&frame_table_lock);
+	list_push_back(&frame_table,&frame->frame_elem);
+	lock_release(&frame_table_lock);
 	ASSERT (frame != NULL);
 	ASSERT (frame->page == NULL);
 	return frame;
@@ -302,14 +333,28 @@ supplemental_page_table_copy (struct supplemental_page_table *dst UNUSED,
 
 				/*1) type이 uninit이면 */
 				if(type == VM_UNINIT){
-					vm_initializer *init = src_page -> uninit.init;
+					vm_initializer *init = src_page->uninit.init;
 					void *aux = src_page->uninit.aux;
 					vm_alloc_page_with_initializer(VM_ANON,upage,writable,init,aux);
 					continue;
 				}
 
-				/*2) type이 uninit이 아니면*/
-				if(!vm_alloc_page_with_initializer(type,upage,writable,NULL,NULL)) return false;
+				/*2) type이 file이면*/
+				if(type == VM_FILE){
+					struct lazy_load_arg *file_aux = malloc(sizeof(struct lazy_load_arg));
+					file_aux->file= src_page->file.file;
+					file_aux->ofs = src_page->file.ofs;
+					file_aux->read_bytes = src_page->file.read_bytes;
+					file_aux->zero_bytes = src_page->file.zero_bytes;
+					if(!vm_alloc_page_with_initializer(type,upage,writable, NULL, file_aux)) return false;
+					struct page *file_page = spt_find_page(dst,upage);
+					file_backed_initializer(file_page,type,NULL);
+					file_page -> frame = src_page->frame;
+					pml4_set_page(thread_current()->pml4, file_page->va, src_page -> frame->kva, src_page->writable);
+					continue;
+				}
+				/*type이 anon이면*/
+				if(!vm_alloc_page(type,upage,writable)) return false;
 
 				if(!vm_claim_page(upage)) return false;
 
